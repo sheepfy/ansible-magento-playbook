@@ -1,0 +1,31 @@
+- name: Register user deployer stats
+  user:
+    name: deployer
+  check_mode: true
+  register: deployer_created
+
+- name: Add user deployer
+  user:
+    name: deployer
+    shell: /bin/bash
+    home: /home/deployer
+    groups: www-data
+    append: yes
+  when: "'state' not in deployer_created"
+
+- name: Change user deployer gid
+  shell: usermod -g www-data deployer && usermod -aG deployer deployer
+  when: "'state' in deployer_created"
+
+- name: apt update
+  apt:
+    update_cache: yes
+
+- name: install tools
+  apt:
+    name:
+      - htop
+      - python3-mysqldb
+      - nmap
+      - zip
+      - unzip

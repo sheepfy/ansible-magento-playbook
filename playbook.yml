@@ -1,0 +1,9 @@
+- hosts: all
+  remote_user: root
+  become: true
+  name: Install Magento
+  vars:
+    deployer_user: deployer
+  roles:
+    - common
+#     - composer

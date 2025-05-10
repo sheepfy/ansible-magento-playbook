@@ -1,0 +1,8 @@
+composer:
+  path: /usr/local/bin/composer
+  version: '2.2.21'
+  keep_updated: false
+  home:
+    path: /home/{{ deployer_user }}/.config/composer
+    owner: "{{ deployer_user }}"
+    group: "{{ www_group }}"
