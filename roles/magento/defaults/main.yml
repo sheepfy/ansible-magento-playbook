@@ -1,0 +1,17 @@
+magento:
+  edition: community
+  version: 2.4.8-p1
+  admin:
+    firstname: ""
+    lastname: ""
+    email: ""
+    username: ""
+    password: ""
+    language: ""
+    currency: ""
+    timezone: ""
+    route: "admin"
+  repos:
+    "repo.magento.com":
+      username: ""
+      password: ""

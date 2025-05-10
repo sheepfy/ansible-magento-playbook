@@ -1,9 +1,60 @@
 - hosts: all
   remote_user: root
   become: true
-  name: Install Magento
+  gather_facts: false
+  name: Run Playbook
   vars:
-    deployer_user: deployer
+    project_name: netrauta
+    app:
+      host: "local.{{ project_name }}.com"
+      root: "/var/www/{{ project_name }}"
+      repo: ""
+    git:
+      token: ""
+      ssh:
+        public_key: ~/.ssh/id_rsa.pub
+        private_key: ~/.ssh/id_rsa
+    magento:
+      admin:
+        firstname: ""
+        lastname: ""
+        email: ""
+        username: ""
+        password: ""
+        language: "ro_RO"
+        currency: "EUR"
+        timezone: "Europe/Bucharest"
+        route: "admin"
+      repos:
+        "repo.magento.com":
+          username: ""
+          password: ""
   roles:
     - common
-#     - composer
+    - webserver
+    - php
+    - mariadb
+    - git
+    - composer
+    - redis
+    - elasticsearch
+    - postfix
+    - magento
+
+
+
+#      - common
+#      - webserver
+#      - php
+#      - mysql
+#      - git
+#      - composer
+#      - nodejs
+#      - redis
+#      #- blackfire
+#      #- varnish
+#      #- rabbitmq
+#      - elasticsearch
+#      - magento
+#      #- samba
+#      - postfix

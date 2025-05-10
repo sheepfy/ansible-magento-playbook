@@ -1,0 +1,65 @@
+- name: Check if elasticsearch repo exists
+  stat:
+    path: "/etc/apt/sources.list.d/mariadb.list"
+  register: elastic_repo
+
+- name: Add GPG key for repository
+  get_url:
+    url: "https://artifacts.elastic.co/GPG-KEY-elasticsearch"
+    dest: /tmp/elasticsearch-keyring.gpg
+    mode: '0644'
+  when: not elastic_repo.stat.exists
+
+- name: Convert GPG key to dearmored format
+  command:
+    cmd: gpg --dearmor -o /usr/share/keyrings/elasticsearch-keyring.gpg /tmp/elasticsearch-keyring.gpg
+  args:
+    creates: /usr/share/keyrings/elasticsearch-keyring.gpg
+  when: not elastic_repo.stat.exists
+
+- name: Add elasticsearch 8 repository into sources list
+  apt_repository:
+    repo: deb [signed-by=/usr/share/keyrings/elasticsearch-keyring.gpg] https://artifacts.elastic.co/packages/8.x/apt stable main
+    state: present
+    filename: "elastic-8.x"
+    update_cache: yes
+  when: not elastic_repo.stat.exists
+
+- name: Ensure elasticsearch is installed
+  apt:
+    name:
+      - elasticsearch
+
+- name: Install elasticsearch plugins
+  elasticsearch_plugin:
+    name: "{{ item }}"
+    state: present
+  with_items:
+    - analysis-phonetic
+    - analysis-icu
+
+- name: Configure elasticsearch
+  template:
+    src: 'elasticsearch.yml'
+    dest: '/etc/elasticsearch/'
+    owner: root
+    group: elasticsearch
+    mode: '660'
+  notify:
+    - restart elasticsearch
+
+- name: Configure JVM options
+  template:
+    src: 'heapsize.options'
+    dest: '/etc/elasticsearch/jvm.options.d/'
+    owner: root
+    group: elasticsearch
+    mode: '660'
+  notify:
+    - restart elasticsearch
+
+- name: Ensure elasticsearch runs at boot
+  systemd:
+    name: elasticsearch
+    enabled: yes
+    state: started

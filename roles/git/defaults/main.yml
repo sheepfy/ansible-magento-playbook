@@ -1,0 +1,5 @@
+git:
+  token: ""
+  ssh:
+    public_key: ~/.ssh/ids_rsa.pub
+    private_key: ~/.ssh/ids_rsa

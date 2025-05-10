@@ -1,0 +1,89 @@
+- name: Check if project exists
+  stat:
+    path: "{{ app.root }}"
+  register: project_dir
+
+- name: Create project root dir
+  file:
+    path: "{{ app.root }}"
+    owner: "{{ deployer_user }}"
+    group: www-data
+    state: directory
+    mode: 0775
+  when: not project_dir.stat.exists
+
+- name: Check if project is deployed
+  find:
+    paths: "{{ app.root }}"
+    file_type: directory
+    patterns: "*"
+  register: project_deployed
+
+- include_tasks: project/clone.yml
+  when:
+    - app.repo
+    - project_deployed.matched|int == 0
+
+- name: add repo.magento.com http-basic auth
+  template:
+    src: "composer/auth.json.j2"
+    dest: "{{ app.root }}/auth.json"
+    owner: "{{ deployer_user }}"
+    group: www-data
+
+- name: check if magento is installed
+  stat:
+    path: "{{ app.root }}/app/etc/env.php"
+  register: magento_installed
+
+- name: Run bin/magento setup:install
+  become_user: "{{ deployer_user }}"
+  command: 'php {{ app.root }}/bin/magento setup:install \
+                --admin-firstname="{{ magento.admin.firstname }}" \
+                --admin-lastname="{{ magento.admin.lastname }}" \
+                --admin-email="{{ magento.admin.email }}" \
+                --admin-user="{{ magento.admin.username }}" \
+                --admin-password="{{ magento.admin.password }}" \
+                --language="{{ magento.admin.language }}" \
+                --currency="{{ magento.admin.currency }}" \
+                --timezone="{{ magento.admin.timezone }}" \
+                --base-url="https://{{ app.host }}/" \
+                --backend-frontname="{{ magento.admin.route }}" \
+                --use-rewrites=1
+                --db-host={{ mariadb.host }} \
+                --db-name={{ mariadb.database }} \
+                --db-user={{ mariadb.username }} \
+                --db-password={{ mariadb.password }} \
+                --session-save=redis \
+                --session-save-redis-db=0 \
+                --cache-backend=redis \
+                --cache-backend-redis-db=1 \
+                --page-cache=redis \
+                --page-cache-redis-db=2 \
+                --search-engine=elasticsuite \
+                --elasticsearch-host=localhost \
+                --elasticsearch-port=9200'
+  when: not magento_installed.stat.exists
+
+- name: set developer mode for magento
+  become_user: "{{ deployer_user }}"
+  command: 'php {{ app.root }}/bin/magento deploy:mode:set developer'
+  when: not magento_installed.stat.exists
+
+- name: disable magento cache
+  become_user: "{{ deployer_user }}"
+  command: 'php {{ app.root }}/bin/magento cache:disable'
+  when: not magento_installed.stat.exists
+
+- name: adjust project directory rights
+  file:
+    dest: "{{ app.root }}"
+    owner: "{{ deployer_user }}"
+    group: www-data
+    recurse: yes
+
+- name: adjust project directory rights
+  become: yes
+  command: chmod -R g+rw {{ app.root }}
+
+- include_tasks: "{{ webserver }}/conf.yml"

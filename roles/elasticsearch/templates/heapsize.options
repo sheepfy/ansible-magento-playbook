@@ -1,0 +1,2 @@
+-Xms{{ elasticsearch.xms }}
+-Xmx{{ elasticsearch.xmx }}

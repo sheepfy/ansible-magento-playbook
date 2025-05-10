@@ -5,4 +5,4 @@ composer:
   home:
     path: /home/{{ deployer_user }}/.config/composer
     owner: "{{ deployer_user }}"
-    group: "{{ www_group }}"
+    group: www-data

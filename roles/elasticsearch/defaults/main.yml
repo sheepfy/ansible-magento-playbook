@@ -1,0 +1,4 @@
+elasticsearch:
+  version: ''
+  xms: 2048m
+  xmx: 2048m

@@ -1,0 +1,5 @@
+[mysqld]
+transaction-isolation = READ-COMMITTED
+optimizer_switch = 'rowid_filter=off'
+optimizer_use_condition_selectivity = 1
+innodb_buffer_pool_size = 1G

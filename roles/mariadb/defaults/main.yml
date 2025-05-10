@@ -1,0 +1,7 @@
+mariadb:
+  version: 11.4
+  host: localhost
+  database: "{{ project_name }}"
+  username: "{{ project_name }}"
+  password: "{{ project_name }}"
+  dump: ''

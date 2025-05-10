@@ -1,0 +1,82 @@
+- name: ensure conf-available folder exists
+  file:
+    path: /etc/nginx/conf-available
+    state: directory
+
+- name: copy nginx config file
+  copy:
+    remote_src: yes
+    src: "{{ app.root }}/nginx.conf.sample"
+    dest: /etc/nginx/conf-available/nginx.conf
+  notify:
+    - restart nginx
+
+- name: write the magento sites-available file
+  template:
+    src: "nginx/magento.conf.j2"
+    dest: /etc/nginx/sites-available/{{ app.host }}
+  notify:
+    - restart nginx
+
+- name: Check for certs
+  stat:
+    path: "/etc/nginx/conf-available/{{ app.host }}"
+  register: certs
+
+- name: create destination directory for certs
+  file:
+    path: "/etc/nginx/conf-available/{{ app.host }}"
+    state: directory
+    mode: '0755'
+    owner: root
+    group: root
+  become: yes
+  when: not certs.stat.exists
+
+- name: Generate mkcert certificate for {{ app.host }}
+  command: mkcert -cert-file fullchain.pem -key-file privkey.pem "{{ app.host }}"
+  args:
+    chdir: "/tmp"
+    creates: "/tmp/fullchain.pem"
+  become: no
+  become_user: "{{ deployer_user }}"
+  when: not certs.stat.exists
+
+- name: Copy cert to nginx fullchain.pem
+  copy:
+    src: "/tmp/fullchain.pem"
+    dest: "/etc/nginx/conf-available/{{ app.host }}/fullchain.pem"
+    owner: root
+    group: root
+    mode: '0644'
+    remote_src: yes
+  become: yes
+  when: not certs.stat.exists
+
+- name: Copy key to nginx privkey.pem
+  copy:
+    src: "/tmp/privkey.pem"
+    dest: "/etc/nginx/conf-available/{{ app.host }}/privkey.pem"
+    owner: root
+    group: root
+    mode: '0600'
+    remote_src: yes
+  become: yes
+  when: not certs.stat.exists
+
+- name: Clean up temporary cert files
+  file:
+    path: "/tmp/{{ item }}"
+    state: absent
+  loop:
+    - "fullchain.pem"
+    - "privkey.pem"
+  become: yes
+
+- name: enable {{ app.host }} site
+  file:
+    src: /etc/nginx/sites-available/{{ app.host }}
+    dest: /etc/nginx/sites-enabled/{{ app.host }}
+    state: link
+  notify:
+    - restart nginx

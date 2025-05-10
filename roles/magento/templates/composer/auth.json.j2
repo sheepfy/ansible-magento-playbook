@@ -1,0 +1,13 @@
+{
+    "http-basic": {
+        {% for repo, auth in magento.repos.items() %}
+        "{{ repo }}": {
+            "username": "{{ auth.username }}",
+            "password": "{{ auth.password }}"
+        }{% if not loop.last %},{% endif %}
+        {% endfor %}
+    },
+    "github-oauth": {
+        "github.com": "{{ git.token }}"
+    }
+}

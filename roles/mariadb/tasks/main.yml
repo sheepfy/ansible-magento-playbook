@@ -1,0 +1,43 @@
+- name: Include MariaDB versioned task file
+  include_tasks: "mariadb{{ mariadb.version }}.yml"
+
+- name: Create mysql database
+  mysql_db:
+    name: "{{ mariadb.database }}"
+    state: present
+  register: db_created
+
+- name: Create mysql user
+  mysql_user:
+    name: "{{ mariadb.username }}"
+    password: "{{ mariadb.password }}"
+    priv: "{{ mariadb.database }}.*:ALL,GRANT"
+    host: "%"
+    column_case_sensitive: "{{ mariadb.case_sensitive | default(false) }}"
+    state: present
+
+- name: Copy database dump file
+  copy:
+    src: "{{ mariadb.dump }}"
+    dest: /tmp
+  when:
+    - mariadb.dump != ''
+    - (role_path + '/files/' + mariadb.dump) is is_file
+    - db_created.changed
+
+- name: Check mysql dump exists
+  stat:
+    path: "/tmp/{{ mariadb.dump }}"
+  register: mariadb_dump
+  when:
+    - mariadb.dump != ''
+
+- name: Restore database
+  mysql_db:
+    name: "{{ mariadb.database }}"
+    state: import
+    target: "/tmp/{{ mariadb.dump }}"
+  when:
+    - mariadb.dump != ''
+    - mariadb_dump.stat.exists
+    - db_created.changed

@@ -1,0 +1,20 @@
+- name: clone project from git
+  become_user: "{{ deployer_user }}"
+  git:
+    umask: "002"
+    key_file: "{{ git.ssh.public_key }}"
+    accept_hostkey: yes
+    repo: "{{ app.repo }}"
+    dest: "{{ app.root }}"
+    update: no
+  when: project_dir.stat.exists
+
+- name: run composer install
+  become_user: "{{ deployer_user }}"
+  shell: |
+    ssh-agent bash
+    ssh-add {{ git.ssh.public_key }}
+    composer install
+  args:
+    chdir: "{{ app.root }}"
+  when: project_dir.stat.exists

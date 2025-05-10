@@ -1,0 +1,10 @@
+- name: Add git prompt PS1 and function to .profile
+  blockinfile:
+    path: /home/{{ deployer_user }}/.profile
+    marker: "# {mark} ANSIBLE MANAGED GIT PROMPT"
+    block: |
+      parse_git_branch() {
+         git branch 2> /dev/null | sed -e '/^[^*]/d' -e 's/* \(.*\)/ (\1)/'
+      }
+      PS1="\[\e[2;32m\]\[\$(date +'%F %H:%M:%S')\]\e[m \u@\h: \[\e[1;34m\]\w\[\e[m\] \[\033[32m\]\$(parse_git_branch)\[\033[00m\]\n$ "
+      export PS1

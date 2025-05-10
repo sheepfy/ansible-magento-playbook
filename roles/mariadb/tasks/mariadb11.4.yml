@@ -1,0 +1,51 @@
+- name: Check if mariadb repo exists
+  stat:
+    path: "/etc/apt/sources.list.d/mariadb.list"
+  register: mariadb_repo
+
+- name: Add GPG key for repository
+  get_url:
+    url: "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0xF1656F24C74CD1D8"
+    dest: /tmp/mariadb-keyring.gpg
+    mode: '0644'
+  when: not mariadb_repo.stat.exists
+
+- name: Convert GPG key to dearmored format
+  command:
+    cmd: gpg --dearmor -o /usr/share/keyrings/mariadb-keyring.gpg /tmp/mariadb-keyring.gpg
+  args:
+    creates: /usr/share/keyrings/mariadb-keyring.gpg
+  when: not mariadb_repo.stat.exists
+
+- name: Add mariadb 11.4 repository into sources list
+  apt_repository:
+    repo: deb [signed-by=/usr/share/keyrings/mariadb-keyring.gpg arch=amd64] https://mirrors.chroot.ro/mariadb/repo/11.4/ubuntu noble main
+    state: present
+    filename: "mariadb"
+    update_cache: yes
+  when: not mariadb_repo.stat.exists
+
+- name: Ensure mariadb 11.4 is installed
+  apt:
+    name:
+      - mariadb-server
+
+- name: Copy mysql config
+  template:
+    src: 'mysql.cnf'
+    dest: '/etc/mysql/conf.d/'
+    owner: root
+    group: root
+    mode: '660'
+  notify:
+    - restart mysql
+
+- name: Open mysql port
+  blockinfile:
+    path: /etc/mysql/my.cnf
+    marker: "# {mark} ANSIBLE MANAGED MYSQL BIND ADDRESS"
+    block: |
+      [mysqld]
+      bind-address=0.0.0.0
+  notify:
+    - restart mysql

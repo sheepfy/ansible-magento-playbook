@@ -1,31 +1,64 @@
-- name: Register user deployer stats
-  user:
-    name: deployer
-  check_mode: true
-  register: deployer_created
+- name: Ensure group '{{ deployer_user }}' exists
+  group:
+    name: "{{ deployer_user }}"
+    state: present
 
-- name: Add user deployer
+- name: Add user '{{ deployer_user }}'
   user:
-    name: deployer
+    name: "{{ deployer_user }}"
     shell: /bin/bash
-    home: /home/deployer
-    groups: www-data
+    home: /home/{{ deployer_user }}
+    group: www-data
+    groups: "{{ deployer_user }},sudo"
     append: yes
-  when: "'state' not in deployer_created"
 
-- name: Change user deployer gid
-  shell: usermod -g www-data deployer && usermod -aG deployer deployer
-  when: "'state' in deployer_created"
+#- name: Add '{{ deployer_user }}' to sudoers
+#  sudoers:
+#    name: "{{ deployer_user }}"
+#    state: present
+#    user: "{{ deployer_user }}"
+#    runas: ALL
+#    commands: ALL
+#    nopasswd: yes
 
-- name: apt update
+- name: Make sure umask is set
+  replace:
+    dest: /home/{{ deployer_user }}/.profile
+    regexp: '^#umask 022$'
+    replace: "umask 002"
+
+- name: Move user '{{ deployer_user }}' to app.root directory
+  blockinfile:
+    path: /home/{{ deployer_user }}/.profile
+    marker: "# {mark} ANSIBLE MANAGED MOVE USER"
+    block: "cd {{ app.root }}"
+
+- name: Install tools
   apt:
     update_cache: yes
-
-- name: install tools
-  apt:
     name:
       - htop
       - python3-mysqldb
       - nmap
       - zip
       - unzip
+      - libnss3-tools
+      - ca-certificates
+      - curl
+      - mkcert
+      - net-tools
+
+- name: Check if rootCA exists
+  stat:
+    path: "/home/{{ deployer_user}}/.local/share/mkcert/rootCA.pem"
+  register: rootca
+
+- name: Install local CA (creates ~/.local/share/mkcert/rootCA.pem)
+  become: no
+  command: mkcert -install
+  environment:
+    XDG_DATA_HOME: "/home/{{ deployer_user }}/.local/share"
+  become_user: "{{ deployer_user }}"
+  args:
+    creates: "/home/{{ deployer_user }}/.local/share/mkcert/rootCA.pem"
+  when: not rootca.stat.exists

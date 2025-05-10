@@ -1,0 +1,8 @@
+- name: Install {{ webserver }}
+  apt:
+    name: "{{ webserver }}"
+
+- name: Ensure {{ webserver }} is running
+  service:
+    name: "{{ webserver }}"
+    state: started

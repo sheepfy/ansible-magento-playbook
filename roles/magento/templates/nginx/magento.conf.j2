@@ -1,0 +1,36 @@
+#map $http_accept $webp_prefix {
+#  default "";
+#  "~*webp" "/webp";
+#}
+
+#map $http_accept $webp_suffix {
+#  default "";
+#  "~*webp" ".webp";
+#}
+
+upstream fastcgi_backend {
+    server unix:/run/php/php{{ php.version }}-fpm.sock;
+}
+
+server {
+    server_name {{ app.host }};
+    set $MAGE_ROOT {{ app.root }};
+
+    client_max_body_size 8M;
+
+    include /etc/nginx/conf-available/nginx.conf;
+
+    listen 443 ssl http2;
+    ssl_certificate /etc/nginx/conf-available/{{ app.host }}/fullchain.pem;
+    ssl_certificate_key /etc/nginx/conf-available/{{ app.host }}/privkey.pem;
+}
+
+server {
+    if ($host = {{ app.host }}) {
+        return 301 https://$host$request_uri;
+    }
+
+    server_name {{ app.host }};
+    listen 80;
+    return 404;
+}
