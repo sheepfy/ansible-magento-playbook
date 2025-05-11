@@ -5,7 +5,7 @@
   vars:
     deployer_user: deployer
   roles:
-#    - common
-#     - composer
-#     - php-and-modules
-     - nginx
+    - common
+     - composer
+     - php-and-modules
+
