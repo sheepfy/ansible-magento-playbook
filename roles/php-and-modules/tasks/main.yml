@@ -1,0 +1,68 @@
+---
+- name: Gather package facts
+  package_facts:
+    manager: auto
+
+- name: Check PHP 8.3 main installation status
+  block:
+    - name: Get installed PHP 8.3
+      set_fact:
+        php83_main: "{{ ansible_facts.packages | select('match', '^php8\\.3$') | list }}"
+
+    - name: Install PHP 8.3
+      package:
+        name: php8.3
+        state: present
+      when: php83_main | length == 0
+      register: php_install
+
+    - name: Show installation result
+      debug:
+        msg: "PHP 8.3 was successfully installed"
+      when: php_install is defined and php_install.changed
+
+    - name: Check PHP 8.3 modules installation status
+      block:
+        - name: Get installed PHP 8.3 packages
+          set_fact:
+            php83_packages: "{{ ansible_facts.packages | select('match', '^php8\\.3.*') | list }}"
+
+    - name: Show installed PHP 8.3 packages
+      debug:
+        msg: "PHP 8.3 is already installed. Packages: {{ php83_packages }}"
+      when: php83_packages | length > 0
+
+- name: Check and install PHP 8.3 required modules
+  block:
+    - name: Define required PHP modules
+      set_fact:
+        required_php_modules:
+          - php8.3-cli
+          - php8.3-common
+          - php8.3-fpm
+          - php8.3-mysql
+
+    - name: Get installed PHP 8.3 packages
+      set_fact:
+        php83_packages: "{{ ansible_facts.packages | select('match', '^php8\\.3.*') | list }}"
+
+    - name: Find missing PHP modules
+      set_fact:
+        missing_php_modules: "{{ required_php_modules | difference(php83_packages) }}"
+
+    - name: Install missing PHP modules
+      package:
+        name: "{{ missing_php_modules }}"
+        state: present
+      when: missing_php_modules | length > 0
+      register: php_modules_install
+
+    - name: Show modules installation result
+      debug:
+        msg: "The following PHP modules were installed: {{ missing_php_modules }}"
+      when: php_modules_install is defined and php_modules_install.changed
+
+    - name: Show status if all modules are installed
+      debug:
+        msg: "All required PHP 8.3 modules are already installed: {{ required_php_modules }}"
+      when: missing_php_modules | length == 0

@@ -1,0 +1,27 @@
+---
+- name: Gather package facts
+  package_facts:
+    manager: auto
+
+- name: Check NGINX instalation status
+  block:
+    - name: Get installed NGINX
+      set_fact:
+        nginx_main: "{{ ansible_facts.packages | select('match', '^nginx$') | list }}"
+
+    - name: Show installed NGINX
+      debug:
+        msg: "NGINX is already installed."
+      when: nginx_main | length > 0
+
+    - name: Install NGINX
+      package:
+        name: nginx
+        state: present
+      when: nginx_main | length == 0
+      register: nginx_install
+
+    - name: Show installation result
+      debug:
+        msg: "NGINX was successfully installed"
+      when: nginx_install is defined and nginx_install.changed
